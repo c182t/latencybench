@@ -47,7 +47,13 @@ func RunBenchmark(fn func() (time.Duration, error), iterations int) (bench.Bench
 func main() {
 	fmt.Println("Syscall Latency Benchmarks: ")
 
-	readDuration, err := RunBenchmark(bench.BenchmarkRead, 1000000)
+	rb := bench.ReadBenchmark{}
+	rb.Open()
+	readBenchmarkFn := func() (time.Duration, error) {
+		return rb.RunBenchmark()
+	}
+	readDuration, err := RunBenchmark(readBenchmarkFn, 10000)
+	rb.Close()
 
 	if err != nil {
 		fmt.Printf("Error occurred in BenchmarkRead: %v", err)
