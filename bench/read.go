@@ -2,15 +2,10 @@ package bench
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"time"
 )
-
-type Benchmark interface {
-	Open() error
-	RunBenchmark() (time.Duration, error)
-	Close()
-}
 
 type ReadBenchmark struct {
 	fd *os.File
@@ -25,13 +20,8 @@ func (rb *ReadBenchmark) Open() error {
 	return nil
 }
 
-func (rb *ReadBenchmark) Close() {
-	if rb.fd != nil {
-		rb.fd.Close()
-	}
-}
-
-func (rb *ReadBenchmark) RunBenchmark() (time.Duration, error) {
+func (rb *ReadBenchmark) BenchmarkOnce() (time.Duration, error) {
+	rb.fd.Seek(0, io.SeekStart)
 	buf := make([]byte, 128)
 	startTime := time.Now()
 	_, err := rb.fd.Read(buf)
@@ -41,4 +31,10 @@ func (rb *ReadBenchmark) RunBenchmark() (time.Duration, error) {
 	duration := time.Since(startTime)
 
 	return duration, nil
+}
+
+func (rb *ReadBenchmark) Close() {
+	if rb.fd != nil {
+		rb.fd.Close()
+	}
 }
