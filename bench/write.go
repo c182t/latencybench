@@ -55,7 +55,7 @@ func (wb *WriteBenchmark) Close() {
 		wb.fd.Close()
 		err := os.Remove(wb.filePath)
 		if err != nil {
-			fmt.Errorf("WriteBenchmark() - Failed to remove file [%s]: %v", wb.filePath, err)
+			fmt.Printf("WriteBenchmark() - Failed to remove file [%s]: %v", wb.filePath, err)
 		}
 	}
 }

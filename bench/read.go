@@ -35,6 +35,7 @@ func (rb *ReadBenchmark) BenchmarkOnce() (time.Duration, error) {
 
 func (rb *ReadBenchmark) Close() {
 	if rb.fd != nil {
+		rb.fd.Remo
 		rb.fd.Close()
 	}
 }
