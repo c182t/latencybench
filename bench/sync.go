@@ -7,11 +7,16 @@ import (
 )
 
 type SyncBenchmark struct {
-	fd       *os.File
-	filePath string
+	fd        *os.File
+	filePath  string
+	blockSize int
 }
 
-func (sb *SyncBenchmark) Open() error {
+func (sb *SyncBenchmark) Setup() error {
+	if sb.blockSize <= 0 {
+		sb.blockSize = 4 * 1024
+	}
+
 	randFileName, err := RandomHexString(16)
 	if err != nil {
 		return fmt.Errorf("SyncBenchmark - unable to generate random file name: %v", err)
@@ -28,8 +33,10 @@ func (sb *SyncBenchmark) Open() error {
 	return nil
 }
 
-func (sb *SyncBenchmark) BenchmarkOnce() (time.Duration, error) {
-	_, err := sb.fd.WriteString("0123456789012345")
+func (sb *SyncBenchmark) RunOnce() (time.Duration, error) {
+	buf := make([]byte, sb.blockSize)
+
+	_, err := sb.fd.Write(buf)
 
 	if err != nil {
 		return 0, fmt.Errorf("SyncBenchmark - Failed to write to a file [%s]: %v", sb.filePath, err)
@@ -43,7 +50,7 @@ func (sb *SyncBenchmark) BenchmarkOnce() (time.Duration, error) {
 	return duration, nil
 }
 
-func (sb *SyncBenchmark) Close() {
+func (sb *SyncBenchmark) Teardown() {
 	if sb.fd != nil {
 		sb.fd.Close()
 		err := os.Remove(sb.filePath)

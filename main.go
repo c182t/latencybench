@@ -6,35 +6,9 @@ import (
 	"latencybench/bench"
 )
 
-type BenchmarkConfig struct {
-	benchmark   string
-	iterations  int
-	parallelism int
-}
-
-type BenchmarkOption func(*BenchmarkConfig)
-
-func WithBenchmark(benchmark string) BenchmarkOption {
-	return func(bc *BenchmarkConfig) {
-		bc.benchmark = benchmark
-	}
-}
-
-func WithIterations(iterations int) BenchmarkOption {
-	return func(bc *BenchmarkConfig) {
-		bc.iterations = iterations
-	}
-}
-
-func WithParallelism(parallelism int) BenchmarkOption {
-	return func(bc *BenchmarkConfig) {
-		bc.parallelism = parallelism
-	}
-}
-
-func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.BenchmarkAggregatedResult {
-	cfg := BenchmarkConfig{
-		parallelism: 1,
+func RunBenchmark(b bench.Benchmark, n int, opts ...bench.BenchmarkOption) bench.BenchmarkAggregatedResult {
+	cfg := bench.BenchmarkConfig{
+		Parallelism: 1,
 	}
 
 	for _, opt := range opts {
@@ -45,13 +19,13 @@ func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.Bench
 	var benchmarkAggResult bench.BenchmarkAggregatedResult
 
 	switch {
-	case cfg.parallelism == 1:
+	case cfg.Parallelism == 1:
 		benchmarkAggResult, err = bench.RunBenchmarkSerial(b, n)
-	case cfg.parallelism > 1:
-		benchmarkAggResult, err = bench.RunBenchmarkParallel(b, n, cfg.parallelism)
+	case cfg.Parallelism > 1:
+		benchmarkAggResult, err = bench.RunBenchmarkParallel(b, n, cfg.Parallelism)
 	default:
-		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d\n", cfg.parallelism)
-		err = fmt.Errorf("invalid parallelism value: %d", cfg.parallelism)
+		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d\n", cfg.Parallelism)
+		err = fmt.Errorf("invalid parallelism value: %d", cfg.Parallelism)
 	}
 
 	if err != nil {
@@ -65,6 +39,7 @@ func main() {
 	benchmarkLabel := flag.String("benchmark", "read", "Benchmark to execute (e.g. read, write, sync)")
 	iterations := flag.Int("iterations", 1000, "Number of benchmark iterations")
 	parallelism := flag.Int("parallelism", 1, "Number of threads to run in parallel")
+	blockSize := flag.Uint("block_size", 4*1024, "Block size (e.g. 4096)")
 
 	flag.Parse()
 
@@ -75,6 +50,10 @@ func main() {
 	}
 
 	benchmark := benchmarkLabelMap[*benchmarkLabel]
-	benchmarkResult := RunBenchmark(benchmark, *iterations, WithParallelism(*parallelism))
+	benchmarkResult := RunBenchmark(benchmark,
+		*iterations,
+		bench.WithParallelism(*parallelism),
+		bench.WithBlockSize(*blockSize))
+
 	fmt.Printf("%s benchmark = %+v\n", *benchmarkLabel, benchmarkResult)
 }

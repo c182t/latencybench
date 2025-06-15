@@ -7,11 +7,16 @@ import (
 )
 
 type WriteBenchmark struct {
-	fd       *os.File
-	filePath string
+	fd        *os.File
+	filePath  string
+	blockSize int
 }
 
-func (wb *WriteBenchmark) Open() error {
+func (wb *WriteBenchmark) Setup() error {
+	if wb.blockSize <= 0 {
+		wb.blockSize = 4 * 1024
+	}
+
 	randString, err := RandomHexString(16)
 	if err != nil {
 		return fmt.Errorf("WriteBenchmark() - Failed to generate random file name: %v", err)
@@ -27,9 +32,11 @@ func (wb *WriteBenchmark) Open() error {
 	return nil
 }
 
-func (wb *WriteBenchmark) BenchmarkOnce() (time.Duration, error) {
+func (wb *WriteBenchmark) RunOnce() (time.Duration, error) {
+	buf := make([]byte, wb.blockSize)
+
 	startTime := time.Now()
-	_, err := wb.fd.WriteString("0123456789012345")
+	_, err := wb.fd.Write(buf)
 
 	if err != nil {
 		return 0, fmt.Errorf("WriteBenchmark() - Failed to write to a file: %v", err)
@@ -39,7 +46,7 @@ func (wb *WriteBenchmark) BenchmarkOnce() (time.Duration, error) {
 	return duration, nil
 }
 
-func (wb *WriteBenchmark) Close() {
+func (wb *WriteBenchmark) Teardown() {
 	if wb.fd != nil {
 		wb.fd.Close()
 		err := os.Remove(wb.filePath)

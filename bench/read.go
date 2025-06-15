@@ -11,7 +11,7 @@ type ReadBenchmark struct {
 	fd *os.File
 }
 
-func (rb *ReadBenchmark) Open() error {
+func (rb *ReadBenchmark) Setup() error {
 	f, err := os.Open("/etc/hostname")
 	if err != nil {
 		return fmt.Errorf("BenchmarkRead() - Failed to open a file: %v", err)
@@ -20,7 +20,7 @@ func (rb *ReadBenchmark) Open() error {
 	return nil
 }
 
-func (rb *ReadBenchmark) BenchmarkOnce() (time.Duration, error) {
+func (rb *ReadBenchmark) RunOnce() (time.Duration, error) {
 	rb.fd.Seek(0, io.SeekStart)
 	buf := make([]byte, 128)
 	startTime := time.Now()
@@ -33,7 +33,7 @@ func (rb *ReadBenchmark) BenchmarkOnce() (time.Duration, error) {
 	return duration, nil
 }
 
-func (rb *ReadBenchmark) Close() {
+func (rb *ReadBenchmark) Teardown() {
 	if rb.fd != nil {
 		rb.fd.Close()
 	}

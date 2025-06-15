@@ -19,9 +19,9 @@ type BenchmarkAggregatedResult struct {
 }
 
 type Benchmark interface {
-	Open() error
-	BenchmarkOnce() (time.Duration, error)
-	Close()
+	Setup() error
+	RunOnce() (time.Duration, error)
+	Teardown()
 	Clone() Benchmark
 }
 
@@ -111,15 +111,15 @@ func RunBenchmarkParallel(b Benchmark, iterations int, parallelism int) (Benchma
 }
 
 func RunBenchmark(b Benchmark, iterations int) (BenchmarkDurations, error) {
-	b.Open()
-	defer b.Close()
+	b.Setup()
+	defer b.Teardown()
 
 	durations := make([]time.Duration, iterations)
 	benchmarkDurations := BenchmarkDurations{}
 
 	for i := 0; i < iterations; i++ {
 		var err error
-		durations[i], err = b.BenchmarkOnce()
+		durations[i], err = b.RunOnce()
 
 		if err != nil {
 			return benchmarkDurations, fmt.Errorf("RunBenchmark() - Failed to run benchmark at iteration [%d]; error: %v", i, err)
