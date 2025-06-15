@@ -44,10 +44,13 @@ func RunBenchmark(b bench.Benchmark, n int) bench.BenchmarkResult {
 func main() {
 	fmt.Println("Syscall Latency Benchmarks: ")
 
-	readBenchmarkResult := RunBenchmark(&bench.ReadBenchmark{}, 100000)
-	writeBenchmarkResult := RunBenchmark(&bench.WriteBenchmark{}, 100000)
-
+	readBenchmarkResult := RunBenchmark(&bench.ReadBenchmark{}, 10000)
 	fmt.Printf("read benchmark = %+v\n", readBenchmarkResult)
+
+	writeBenchmarkResult := RunBenchmark(&bench.WriteBenchmark{}, 10000)
 	fmt.Printf("write benchmark = %+v\n", writeBenchmarkResult)
+
+	syncBenchmarkResult := RunBenchmark(&bench.SyncBenchmark{}, 10000)
+	fmt.Printf("sync benchmark = %+v\n", syncBenchmarkResult)
 
 }
