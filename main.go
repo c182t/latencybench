@@ -18,7 +18,7 @@ func WithParallelism(parallelism int) BenchmarkOption {
 	}
 }
 
-func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.BenchmarkResult {
+func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.BenchmarkAggregatedResult {
 	cfg := BenchmarkConfig{
 		parallelism: 1,
 	}
@@ -35,16 +35,15 @@ func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.Bench
 	}
 
 	var err error
-	var benchmarkResult bench.BenchmarkResult
+	var benchmarkAggResult bench.BenchmarkAggregatedResult
 
 	switch {
 	case cfg.parallelism == 1:
-		benchmarkResult, err = bench.RunBenchmark(readBenchmarkFn, n)
+		benchmarkAggResult, err = bench.RunBenchmarkSerial(readBenchmarkFn, n)
 	case cfg.parallelism > 1:
-		benchmarkResult, err = bench.RunBenchmarkParallel(readBenchmarkFn, n, cfg.parallelism)
+		benchmarkAggResult, err = bench.RunBenchmarkParallel(readBenchmarkFn, n, cfg.parallelism)
 	default:
 		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d", cfg.parallelism)
-		benchmarkResult = bench.BenchmarkResult{}
 		err = fmt.Errorf("Ivalid parallelis value: %d", cfg.parallelism)
 	}
 
@@ -52,7 +51,7 @@ func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.Bench
 		fmt.Printf("Error occurred in RunBenchmark: %v", err)
 	}
 
-	return benchmarkResult
+	return benchmarkAggResult
 }
 
 func main() {

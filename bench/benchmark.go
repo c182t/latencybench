@@ -24,7 +24,16 @@ type Benchmark interface {
 	Close()
 }
 
-func (brr BenchmarkDurations) AggregateBenchmarkResult() (BenchmarkAggregatedResult, error) {
+func AggregateBenchmarkDurationsMultiple(brrs []BenchmarkDurations) (BenchmarkAggregatedResult, error) {
+	var flatBencharkDurations []time.Duration
+	for _, benchmarkDurationsChunk := range brrs {
+		flatBencharkDurations = append(flatBencharkDurations, benchmarkDurationsChunk.durations...)
+	}
+
+	return AggregateBenchmarkDurations(BenchmarkDurations{flatBencharkDurations})
+}
+
+func AggregateBenchmarkDurations(brr BenchmarkDurations) (BenchmarkAggregatedResult, error) {
 	benchmarkAggResult := BenchmarkAggregatedResult{}
 
 	var avg float64
@@ -53,34 +62,51 @@ func (brr BenchmarkDurations) AggregateBenchmarkResult() (BenchmarkAggregatedRes
 	return benchmarkAggResult, nil
 }
 
-func RunBenchmarkParallel(fn func() (time.Duration, error), iterations int, parallelism int) (BenchmarkResult, error) {
+func RunBenchmarkSerial(fn func() (time.Duration, error), iterations int) (BenchmarkAggregatedResult, error) {
+	benchmarkDurations, err := RunBenchmark(fn, iterations)
+	benchmarkAggRes, err := AggregateBenchmarkDurations(benchmarkDurations)
+	if err != nil {
+		fmt.Printf("Error ocurred in RunBenchmarkSerial: %v ", err)
+	}
+
+	return benchmarkAggRes, nil
+}
+
+func RunBenchmarkParallel(fn func() (time.Duration, error), iterations int, parallelism int) (BenchmarkAggregatedResult, error) {
 	iterationsPerThread := int(float64(iterations) / float64(parallelism))
 	if iterationsPerThread <= 0 {
-		return BenchmarkResult{},
+		return BenchmarkAggregatedResult{},
 			fmt.Errorf("RunBenchmarkParallel failed - iterationsPerThread must be > 0, but is %d. [iterations=%d] [parallelism=%d]",
 				iterationsPerThread, iterations, parallelism)
 	}
 
 	var wg sync.WaitGroup
-	results := make(chan BenchmarkResult, parallelism)
+	becnhmarkDurationsChan := make(chan BenchmarkDurations, parallelism)
 	for i := 0; i < parallelism; i++ {
 		wg.Add(1)
 		go func() {
-			benchmarkResult, err := RunBenchmark(fn, iterationsPerThread)
+			defer wg.Done()
+			benchmarkDurations, err := RunBenchmark(fn, iterationsPerThread)
 			if err != nil {
 				fmt.Printf("Error ocurred in RunBenchmarkParallel: %v ", err)
 			}
-			results <- benchmarkResult
+			becnhmarkDurationsChan <- benchmarkDurations
 		}()
 	}
 	wg.Wait()
-	close(results)
+	close(becnhmarkDurationsChan)
 
-	for result := range results {
-		fmt.Printf("Result: %v", result)
+	benchmarkDurationsArray := make([]BenchmarkDurations, parallelism)
+	for benchmarkDurations := range becnhmarkDurationsChan {
+		benchmarkDurationsArray = append(benchmarkDurationsArray, benchmarkDurations)
 	}
 
-	return BenchmarkResult{}, nil
+	benchmarkAggRes, err := AggregateBenchmarkDurationsMultiple(benchmarkDurationsArray)
+	if err != nil {
+		fmt.Printf("Error ocurred in RunBenchmarkParallel: %v ", err)
+	}
+
+	return benchmarkAggRes, nil
 }
 
 func RunBenchmark(fn func() (time.Duration, error), iterations int) (BenchmarkDurations, error) {
@@ -95,6 +121,7 @@ func RunBenchmark(fn func() (time.Duration, error), iterations int) (BenchmarkDu
 			return benchmarkDurations, fmt.Errorf("RunBenchmark() - Failed to run benchmark at iteration [%d]; error: %v", i, err)
 		}
 	}
+	benchmarkDurations.durations = durations
 
 	return benchmarkDurations, nil
 }
