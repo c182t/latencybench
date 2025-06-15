@@ -6,33 +6,47 @@ import (
 	"time"
 )
 
-/*
-func RunReadBenchmark() bench.BenchmarkResult {
-	rb := bench.ReadBenchmark{}
-	rb.Open()
-	defer rb.Close()
-
-	readBenchmarkFn := func() (time.Duration, error) {
-		return rb.BenchmarkOnce()
-	}
-	benchmarkResult, err := bench.RunBenchmark(readBenchmarkFn, 10000)
-
-	if err != nil {
-		fmt.Printf("Error occurred in RunBenchmark: %v", err)
-	}
-
-	return benchmarkResult
+type BenchmarkConfig struct {
+	parallelism int
 }
-*/
 
-func RunBenchmark(b bench.Benchmark, n int) bench.BenchmarkResult {
+type BenchmarkOption func(*BenchmarkConfig)
+
+func WithParallelism(parallelism int) BenchmarkOption {
+	return func(bc *BenchmarkConfig) {
+		bc.parallelism = parallelism
+	}
+}
+
+func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.BenchmarkResult {
+	cfg := BenchmarkConfig{
+		parallelism: 1,
+	}
+
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	b.Open()
 	defer b.Close()
 
 	readBenchmarkFn := func() (time.Duration, error) {
 		return b.BenchmarkOnce()
 	}
-	benchmarkResult, err := bench.RunBenchmark(readBenchmarkFn, n)
+
+	var err error
+	var benchmarkResult bench.BenchmarkResult
+
+	switch {
+	case cfg.parallelism == 1:
+		benchmarkResult, err = bench.RunBenchmark(readBenchmarkFn, n)
+	case cfg.parallelism > 1:
+		benchmarkResult, err = bench.RunBenchmarkParallel(readBenchmarkFn, n, cfg.parallelism)
+	default:
+		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d", cfg.parallelism)
+		benchmarkResult = bench.BenchmarkResult{}
+		err = fmt.Errorf("Ivalid parallelis value: %d", cfg.parallelism)
+	}
 
 	if err != nil {
 		fmt.Printf("Error occurred in RunBenchmark: %v", err)
@@ -52,5 +66,10 @@ func main() {
 
 	syncBenchmarkResult := RunBenchmark(&bench.SyncBenchmark{}, 10000)
 	fmt.Printf("sync benchmark = %+v\n", syncBenchmarkResult)
+
+	for _, i := range []int{2, 4, 8, 16, 32, 64} {
+		syncBenchmarkResult := RunBenchmark(&bench.SyncBenchmark{}, 10000, WithParallelism(i))
+		fmt.Printf("parallel sync [parallelism=%d] benchmark = %+v\n", i, syncBenchmarkResult)
+	}
 
 }
