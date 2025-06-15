@@ -7,6 +7,7 @@ import (
 )
 
 type SyncBenchmark struct {
+	Options   *BenchmarkOptions
 	fd        *os.File
 	filePath  string
 	blockSize int
@@ -63,4 +64,8 @@ func (sb *SyncBenchmark) Teardown() {
 func (sb *SyncBenchmark) Clone() Benchmark {
 	clone := *sb
 	return &clone
+}
+
+func (sb *SyncBenchmark) GetOptions() *BenchmarkOptions {
+	return sb.Options
 }

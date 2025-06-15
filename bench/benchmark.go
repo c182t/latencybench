@@ -23,6 +23,7 @@ type Benchmark interface {
 	RunOnce() (time.Duration, error)
 	Teardown()
 	Clone() Benchmark
+	GetOptions() *BenchmarkOptions
 }
 
 func AggregateBenchmarkDurationsMultiple(brrs []BenchmarkDurations) (BenchmarkAggregatedResult, error) {
@@ -63,8 +64,8 @@ func AggregateBenchmarkDurations(brr BenchmarkDurations) (BenchmarkAggregatedRes
 	return benchmarkAggResult, nil
 }
 
-func RunBenchmarkSerial(b Benchmark, iterations int) (BenchmarkAggregatedResult, error) {
-	benchmarkDurations, err := RunBenchmark(b, iterations)
+func RunBenchmarkSerial(b Benchmark) (BenchmarkAggregatedResult, error) {
+	benchmarkDurations, err := RunBenchmark(b, b.GetOptions().Iterations)
 	benchmarkAggRes, err := AggregateBenchmarkDurations(benchmarkDurations)
 	if err != nil {
 		fmt.Printf("Error ocurred in RunBenchmarkSerial: %v ", err)
@@ -73,17 +74,17 @@ func RunBenchmarkSerial(b Benchmark, iterations int) (BenchmarkAggregatedResult,
 	return benchmarkAggRes, nil
 }
 
-func RunBenchmarkParallel(b Benchmark, iterations int, parallelism int) (BenchmarkAggregatedResult, error) {
-	iterationsPerThread := int(float64(iterations) / float64(parallelism))
+func RunBenchmarkParallel(b Benchmark) (BenchmarkAggregatedResult, error) {
+	iterationsPerThread := int(float64(b.GetOptions().Iterations) / float64(b.GetOptions().Parallelism))
 	if iterationsPerThread <= 0 {
 		return BenchmarkAggregatedResult{},
 			fmt.Errorf("RunBenchmarkParallel failed - iterationsPerThread must be > 0, but is %d. [iterations=%d] [parallelism=%d]",
-				iterationsPerThread, iterations, parallelism)
+				iterationsPerThread, b.GetOptions().Iterations, b.GetOptions().Parallelism)
 	}
 
 	var wg sync.WaitGroup
-	becnhmarkDurationsChan := make(chan BenchmarkDurations, parallelism)
-	for i := 0; i < parallelism; i++ {
+	becnhmarkDurationsChan := make(chan BenchmarkDurations, b.GetOptions().Parallelism)
+	for i := 0; i < b.GetOptions().Parallelism; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -97,7 +98,7 @@ func RunBenchmarkParallel(b Benchmark, iterations int, parallelism int) (Benchma
 	wg.Wait()
 	close(becnhmarkDurationsChan)
 
-	benchmarkDurationsArray := make([]BenchmarkDurations, parallelism)
+	benchmarkDurationsArray := make([]BenchmarkDurations, b.GetOptions().Parallelism)
 	for benchmarkDurations := range becnhmarkDurationsChan {
 		benchmarkDurationsArray = append(benchmarkDurationsArray, benchmarkDurations)
 	}

@@ -7,6 +7,7 @@ import (
 )
 
 type WriteBenchmark struct {
+	Options   *BenchmarkOptions
 	fd        *os.File
 	filePath  string
 	blockSize int
@@ -59,4 +60,8 @@ func (wb *WriteBenchmark) Teardown() {
 func (wb *WriteBenchmark) Clone() Benchmark {
 	clone := *wb
 	return &clone
+}
+
+func (wb *WriteBenchmark) GetOptions() *BenchmarkOptions {
+	return wb.Options
 }

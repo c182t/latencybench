@@ -8,7 +8,8 @@ import (
 )
 
 type ReadBenchmark struct {
-	fd *os.File
+	Options *BenchmarkOptions
+	fd      *os.File
 }
 
 func (rb *ReadBenchmark) Setup() error {
@@ -42,4 +43,8 @@ func (rb *ReadBenchmark) Teardown() {
 func (rb *ReadBenchmark) Clone() Benchmark {
 	clone := *rb
 	return &clone
+}
+
+func (rb *ReadBenchmark) GetOptions() *BenchmarkOptions {
+	return rb.Options
 }

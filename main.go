@@ -6,26 +6,18 @@ import (
 	"latencybench/bench"
 )
 
-func RunBenchmark(b bench.Benchmark, n int, opts ...bench.BenchmarkOption) bench.BenchmarkAggregatedResult {
-	cfg := bench.BenchmarkConfig{
-		Parallelism: 1,
-	}
-
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-
+func RunBenchmark(b bench.Benchmark, n int) bench.BenchmarkAggregatedResult {
 	var err error
 	var benchmarkAggResult bench.BenchmarkAggregatedResult
 
 	switch {
-	case cfg.Parallelism == 1:
-		benchmarkAggResult, err = bench.RunBenchmarkSerial(b, n)
-	case cfg.Parallelism > 1:
-		benchmarkAggResult, err = bench.RunBenchmarkParallel(b, n, cfg.Parallelism)
+	case b.GetOptions().Parallelism == 1:
+		benchmarkAggResult, err = bench.RunBenchmarkSerial(b)
+	case b.GetOptions().Parallelism > 1:
+		benchmarkAggResult, err = bench.RunBenchmarkParallel(b)
 	default:
-		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d\n", cfg.Parallelism)
-		err = fmt.Errorf("invalid parallelism value: %d", cfg.Parallelism)
+		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d\n", b.GetOptions().Parallelism)
+		err = fmt.Errorf("invalid parallelism value: %d", b.GetOptions().Parallelism)
 	}
 
 	if err != nil {
@@ -43,17 +35,20 @@ func main() {
 
 	flag.Parse()
 
+	options := bench.BenchmarkOptions{Benchmark: *benchmarkLabel,
+		Iterations:  *iterations,
+		Parallelism: *parallelism,
+		BlockSize:   *blockSize}
+
 	var benchmarkLabelMap = map[string]bench.Benchmark{
-		"read":  &bench.ReadBenchmark{},
-		"write": &bench.WriteBenchmark{},
-		"sync":  &bench.SyncBenchmark{},
+		"read":  &bench.ReadBenchmark{Options: &options},
+		"write": &bench.WriteBenchmark{Options: &options},
+		"sync":  &bench.SyncBenchmark{Options: &options},
 	}
 
 	benchmark := benchmarkLabelMap[*benchmarkLabel]
 	benchmarkResult := RunBenchmark(benchmark,
-		*iterations,
-		bench.WithParallelism(*parallelism),
-		bench.WithBlockSize(*blockSize))
+		*iterations)
 
 	fmt.Printf("%s benchmark = %+v\n", *benchmarkLabel, benchmarkResult)
 }
