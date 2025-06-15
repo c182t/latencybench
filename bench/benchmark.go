@@ -22,6 +22,7 @@ type Benchmark interface {
 	Open() error
 	BenchmarkOnce() (time.Duration, error)
 	Close()
+	Clone() Benchmark
 }
 
 func AggregateBenchmarkDurationsMultiple(brrs []BenchmarkDurations) (BenchmarkAggregatedResult, error) {
@@ -62,8 +63,8 @@ func AggregateBenchmarkDurations(brr BenchmarkDurations) (BenchmarkAggregatedRes
 	return benchmarkAggResult, nil
 }
 
-func RunBenchmarkSerial(fn func() (time.Duration, error), iterations int) (BenchmarkAggregatedResult, error) {
-	benchmarkDurations, err := RunBenchmark(fn, iterations)
+func RunBenchmarkSerial(b Benchmark, iterations int) (BenchmarkAggregatedResult, error) {
+	benchmarkDurations, err := RunBenchmark(b, iterations)
 	benchmarkAggRes, err := AggregateBenchmarkDurations(benchmarkDurations)
 	if err != nil {
 		fmt.Printf("Error ocurred in RunBenchmarkSerial: %v ", err)
@@ -72,7 +73,7 @@ func RunBenchmarkSerial(fn func() (time.Duration, error), iterations int) (Bench
 	return benchmarkAggRes, nil
 }
 
-func RunBenchmarkParallel(fn func() (time.Duration, error), iterations int, parallelism int) (BenchmarkAggregatedResult, error) {
+func RunBenchmarkParallel(b Benchmark, iterations int, parallelism int) (BenchmarkAggregatedResult, error) {
 	iterationsPerThread := int(float64(iterations) / float64(parallelism))
 	if iterationsPerThread <= 0 {
 		return BenchmarkAggregatedResult{},
@@ -86,9 +87,9 @@ func RunBenchmarkParallel(fn func() (time.Duration, error), iterations int, para
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			benchmarkDurations, err := RunBenchmark(fn, iterationsPerThread)
+			benchmarkDurations, err := RunBenchmark(b.Clone(), iterationsPerThread)
 			if err != nil {
-				fmt.Printf("Error ocurred in RunBenchmarkParallel: %v ", err)
+				fmt.Printf("Error ocurred in RunBenchmarkParallel: %v\n", err)
 			}
 			becnhmarkDurationsChan <- benchmarkDurations
 		}()
@@ -103,19 +104,22 @@ func RunBenchmarkParallel(fn func() (time.Duration, error), iterations int, para
 
 	benchmarkAggRes, err := AggregateBenchmarkDurationsMultiple(benchmarkDurationsArray)
 	if err != nil {
-		fmt.Printf("Error ocurred in RunBenchmarkParallel: %v ", err)
+		fmt.Printf("Error ocurred in RunBenchmarkParallel: %v\n", err)
 	}
 
 	return benchmarkAggRes, nil
 }
 
-func RunBenchmark(fn func() (time.Duration, error), iterations int) (BenchmarkDurations, error) {
+func RunBenchmark(b Benchmark, iterations int) (BenchmarkDurations, error) {
+	b.Open()
+	defer b.Close()
+
 	durations := make([]time.Duration, iterations)
 	benchmarkDurations := BenchmarkDurations{}
 
 	for i := 0; i < iterations; i++ {
 		var err error
-		durations[i], err = fn()
+		durations[i], err = b.BenchmarkOnce()
 
 		if err != nil {
 			return benchmarkDurations, fmt.Errorf("RunBenchmark() - Failed to run benchmark at iteration [%d]; error: %v", i, err)

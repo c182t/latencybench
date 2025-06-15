@@ -38,3 +38,8 @@ func (rb *ReadBenchmark) Close() {
 		rb.fd.Close()
 	}
 }
+
+func (rb *ReadBenchmark) Clone() Benchmark {
+	clone := *rb
+	return &clone
+}

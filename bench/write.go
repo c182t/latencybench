@@ -48,3 +48,8 @@ func (wb *WriteBenchmark) Close() {
 		}
 	}
 }
+
+func (wb *WriteBenchmark) Clone() Benchmark {
+	clone := *wb
+	return &clone
+}

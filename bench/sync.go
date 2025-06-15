@@ -52,3 +52,8 @@ func (sb *SyncBenchmark) Close() {
 		}
 	}
 }
+
+func (sb *SyncBenchmark) Clone() Benchmark {
+	clone := *sb
+	return &clone
+}

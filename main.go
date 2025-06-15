@@ -1,16 +1,30 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"latencybench/bench"
-	"time"
 )
 
 type BenchmarkConfig struct {
+	benchmark   string
+	iterations  int
 	parallelism int
 }
 
 type BenchmarkOption func(*BenchmarkConfig)
+
+func WithBenchmark(benchmark string) BenchmarkOption {
+	return func(bc *BenchmarkConfig) {
+		bc.benchmark = benchmark
+	}
+}
+
+func WithIterations(iterations int) BenchmarkOption {
+	return func(bc *BenchmarkConfig) {
+		bc.iterations = iterations
+	}
+}
 
 func WithParallelism(parallelism int) BenchmarkOption {
 	return func(bc *BenchmarkConfig) {
@@ -27,48 +41,40 @@ func RunBenchmark(b bench.Benchmark, n int, opts ...BenchmarkOption) bench.Bench
 		opt(&cfg)
 	}
 
-	b.Open()
-	defer b.Close()
-
-	readBenchmarkFn := func() (time.Duration, error) {
-		return b.BenchmarkOnce()
-	}
-
 	var err error
 	var benchmarkAggResult bench.BenchmarkAggregatedResult
 
 	switch {
 	case cfg.parallelism == 1:
-		benchmarkAggResult, err = bench.RunBenchmarkSerial(readBenchmarkFn, n)
+		benchmarkAggResult, err = bench.RunBenchmarkSerial(b, n)
 	case cfg.parallelism > 1:
-		benchmarkAggResult, err = bench.RunBenchmarkParallel(readBenchmarkFn, n, cfg.parallelism)
+		benchmarkAggResult, err = bench.RunBenchmarkParallel(b, n, cfg.parallelism)
 	default:
-		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d", cfg.parallelism)
-		err = fmt.Errorf("Ivalid parallelis value: %d", cfg.parallelism)
+		fmt.Printf("Error occurred in RunBenchmark - incorrect parallelism value: %d\n", cfg.parallelism)
+		err = fmt.Errorf("invalid parallelism value: %d", cfg.parallelism)
 	}
 
 	if err != nil {
-		fmt.Printf("Error occurred in RunBenchmark: %v", err)
+		fmt.Printf("Error occurred in RunBenchmark: %v\n", err)
 	}
 
 	return benchmarkAggResult
 }
 
 func main() {
-	fmt.Println("Syscall Latency Benchmarks: ")
+	benchmarkLabel := flag.String("benchmark", "read", "Benchmark to execute (e.g. read, write, sync)")
+	iterations := flag.Int("iterations", 1000, "Number of benchmark iterations")
+	parallelism := flag.Int("parallelism", 1, "Number of threads to run in parallel")
 
-	readBenchmarkResult := RunBenchmark(&bench.ReadBenchmark{}, 10000)
-	fmt.Printf("read benchmark = %+v\n", readBenchmarkResult)
+	flag.Parse()
 
-	writeBenchmarkResult := RunBenchmark(&bench.WriteBenchmark{}, 10000)
-	fmt.Printf("write benchmark = %+v\n", writeBenchmarkResult)
-
-	syncBenchmarkResult := RunBenchmark(&bench.SyncBenchmark{}, 10000)
-	fmt.Printf("sync benchmark = %+v\n", syncBenchmarkResult)
-
-	for _, i := range []int{2, 4, 8, 16, 32, 64} {
-		syncBenchmarkResult := RunBenchmark(&bench.SyncBenchmark{}, 10000, WithParallelism(i))
-		fmt.Printf("parallel sync [parallelism=%d] benchmark = %+v\n", i, syncBenchmarkResult)
+	var benchmarkLabelMap = map[string]bench.Benchmark{
+		"read":  &bench.ReadBenchmark{},
+		"write": &bench.WriteBenchmark{},
+		"sync":  &bench.SyncBenchmark{},
 	}
 
+	benchmark := benchmarkLabelMap[*benchmarkLabel]
+	benchmarkResult := RunBenchmark(benchmark, *iterations, WithParallelism(*parallelism))
+	fmt.Printf("%s benchmark = %+v\n", *benchmarkLabel, benchmarkResult)
 }
