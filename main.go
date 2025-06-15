@@ -41,9 +41,10 @@ func main() {
 		BlockSize:   *blockSize}
 
 	var benchmarkLabelMap = map[string]bench.Benchmark{
-		"read":  &bench.ReadBenchmark{Options: &options},
-		"write": &bench.WriteBenchmark{Options: &options},
-		"sync":  &bench.SyncBenchmark{Options: &options},
+		"read":        &bench.ReadBenchmark{Options: &options},
+		"write":       &bench.WriteBenchmark{Options: &options},
+		"sync":        &bench.SyncBenchmark{Options: &options},
+		"memory_copy": &bench.MemoryCopyBenchmark{Options: &options},
 	}
 
 	benchmark := benchmarkLabelMap[*benchmarkLabel]
