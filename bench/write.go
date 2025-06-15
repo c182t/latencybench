@@ -7,15 +7,14 @@ import (
 )
 
 type WriteBenchmark struct {
-	Options   *BenchmarkOptions
-	fd        *os.File
-	filePath  string
-	blockSize int
+	Options  *BenchmarkOptions
+	fd       *os.File
+	filePath string
 }
 
 func (wb *WriteBenchmark) Setup() error {
-	if wb.blockSize <= 0 {
-		wb.blockSize = 4 * 1024
+	if wb.GetOptions().BlockSize <= 0 {
+		wb.GetOptions().BlockSize = 4 * 1024
 	}
 
 	randString, err := RandomHexString(16)
@@ -34,7 +33,7 @@ func (wb *WriteBenchmark) Setup() error {
 }
 
 func (wb *WriteBenchmark) RunOnce() (time.Duration, error) {
-	buf := make([]byte, wb.blockSize)
+	buf := make([]byte, wb.GetOptions().BlockSize)
 
 	startTime := time.Now()
 	_, err := wb.fd.Write(buf)

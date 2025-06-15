@@ -7,15 +7,14 @@ import (
 )
 
 type SyncBenchmark struct {
-	Options   *BenchmarkOptions
-	fd        *os.File
-	filePath  string
-	blockSize int
+	Options  *BenchmarkOptions
+	fd       *os.File
+	filePath string
 }
 
 func (sb *SyncBenchmark) Setup() error {
-	if sb.blockSize <= 0 {
-		sb.blockSize = 4 * 1024
+	if sb.GetOptions().BlockSize <= 0 {
+		sb.GetOptions().BlockSize = 4 * 1024
 	}
 
 	randFileName, err := RandomHexString(16)
@@ -35,7 +34,7 @@ func (sb *SyncBenchmark) Setup() error {
 }
 
 func (sb *SyncBenchmark) RunOnce() (time.Duration, error) {
-	buf := make([]byte, sb.blockSize)
+	buf := make([]byte, sb.GetOptions().BlockSize)
 
 	_, err := sb.fd.Write(buf)
 
