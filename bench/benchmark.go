@@ -66,9 +66,13 @@ func AggregateBenchmarkDurations(brr BenchmarkDurations) (BenchmarkAggregatedRes
 
 func RunBenchmarkSerial(b Benchmark) (BenchmarkAggregatedResult, error) {
 	benchmarkDurations, err := RunBenchmark(b, b.GetOptions().Iterations)
+	if err != nil {
+		return BenchmarkAggregatedResult{}, fmt.Errorf("Error ocurred in RunBenchmarkSerial: %v ", err)
+	}
+
 	benchmarkAggRes, err := AggregateBenchmarkDurations(benchmarkDurations)
 	if err != nil {
-		fmt.Printf("Error ocurred in RunBenchmarkSerial: %v ", err)
+		return BenchmarkAggregatedResult{}, fmt.Errorf("Error ocurred in RunBenchmarkSerial: %v ", err)
 	}
 
 	return benchmarkAggRes, nil

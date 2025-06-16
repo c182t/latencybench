@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,6 +12,9 @@ import (
 
 type LoopbackTCPBenchmark struct {
 	Options       *BenchmarkOptions
+	protocol      string
+	ip            string
+	port          string
 	serverContext context.Context
 	cancelContext context.CancelFunc
 	listener      net.Listener
@@ -19,23 +23,26 @@ type LoopbackTCPBenchmark struct {
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
-	buf := make([]byte, 4096)
+
+	buf := make([]byte, 1028)
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
 			if err != io.EOF {
 				fmt.Println("Read error:", err)
 			}
-			return
+			break
 		}
 		conn.Write(buf[:n])
 	}
 }
 
 func StartServer(protocol string, ip string, port string, ctx context.Context, wg *sync.WaitGroup) (net.Listener, error) {
-	ln, err := net.Listen(protocol, fmt.Sprintf("%s:%s", ip, port))
+	addr := fmt.Sprintf("%s:%s", ip, port)
+
+	ln, err := net.Listen(protocol, addr)
 	if err != nil {
-		fmt.Printf("Unable to start server: %v", err)
+		fmt.Printf("Unable to start server [protocol=%s; addr=%s]: %v", protocol, addr, err)
 	}
 
 	wg.Add(1)
@@ -61,10 +68,16 @@ func StartServer(protocol string, ip string, port string, ctx context.Context, w
 }
 
 func (ltb *LoopbackTCPBenchmark) Setup() error {
+	ltb.protocol = "tcp"
+	ltb.ip = "127.0.0.1"
+	ltb.port = "9001"
+
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 
-	ln, err := StartServer("tcp", "127.0.0.1", "9001", ctx, &wg)
+	ln, err := StartServer(ltb.protocol,
+		ltb.ip, string(ltb.port), ctx, &wg)
+
 	if err != nil {
 		return fmt.Errorf("Unable to start TCP server for LoopbackTCPBenchmark: %v", err)
 	}
@@ -78,19 +91,25 @@ func (ltb *LoopbackTCPBenchmark) Setup() error {
 }
 
 func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
-	conn, err := net.Dial("tcp", "127.0.0.1:9000")
+	addr := fmt.Sprintf("%s:%s", ltb.ip, ltb.port)
+	conn, err := net.Dial(ltb.protocol, addr)
 	if err != nil {
-		return 0, fmt.Errorf("Unable to connect to 127.0.0.1: %v", err)
+		return 0, fmt.Errorf("Unable to connect to %s on %s; %v", addr, ltb.protocol, err)
 	}
 	defer conn.Close()
 
-	writeBuf := make([]byte, 4096)
+	writeBuf := bytes.Repeat([]byte{'.'}, 4096)
+
+	writeBuf[0] = '['
+	writeBuf[len(writeBuf)-1] = ']'
+
 	readBuf := make([]byte, 4096)
 
 	startTime := time.Now()
 
 	conn.Write(writeBuf)
 	conn.Read(readBuf)
+	//fmt.Printf("readBuf=%s-%s", readBuf[:5], readBuf[len(readBuf)-5:len(readBuf)])
 
 	duration := time.Since(startTime)
 	return duration, nil
