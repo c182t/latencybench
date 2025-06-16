@@ -14,7 +14,7 @@ type LoopbackTCPBenchmark struct {
 	Options       *BenchmarkOptions
 	protocol      string
 	ip            string
-	port          string
+	port          int
 	serverContext context.Context
 	cancelContext context.CancelFunc
 	listener      net.Listener
@@ -70,17 +70,18 @@ func StartServer(protocol string, ip string, port string, ctx context.Context, w
 func (ltb *LoopbackTCPBenchmark) Setup() error {
 	ltb.protocol = "tcp"
 	ltb.ip = "127.0.0.1"
-	ltb.port = "9001"
 
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 
 	ln, err := StartServer(ltb.protocol,
-		ltb.ip, string(ltb.port), ctx, &wg)
+		ltb.ip, "0", ctx, &wg)
 
 	if err != nil {
 		return fmt.Errorf("Unable to start TCP server for LoopbackTCPBenchmark: %v", err)
 	}
+
+	ltb.port = ln.Addr().(*net.TCPAddr).Port
 
 	ltb.serverContext = ctx
 	ltb.cancelContext = cancel
@@ -91,7 +92,7 @@ func (ltb *LoopbackTCPBenchmark) Setup() error {
 }
 
 func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
-	addr := fmt.Sprintf("%s:%s", ltb.ip, ltb.port)
+	addr := fmt.Sprintf("%s:%d", ltb.ip, ltb.port)
 	conn, err := net.Dial(ltb.protocol, addr)
 	if err != nil {
 		return 0, fmt.Errorf("unable to connect to %s on %s; %v", addr, ltb.protocol, err)
