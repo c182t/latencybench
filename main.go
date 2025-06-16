@@ -49,6 +49,9 @@ func main() {
 		"retint": func(options bench.BenchmarkOptions) bench.Benchmark {
 			return &bench.RetIntBenchmark{Options: &options}
 		},
+		"loopback_tcp": func(options bench.BenchmarkOptions) bench.Benchmark {
+			return &bench.LoopbackTCPBenchmark{Options: &options}
+		},
 	}
 
 	configPath := flag.String("config_path", "", "yaml config file path")

@@ -10,25 +10,25 @@ import (
 )
 
 type LoopbackTCPBenchmark struct {
-	Options *BenchmarkOptions
+	Options       *BenchmarkOptions
 	serverContext context.Context
 	cancelContext context.CancelFunc
-	listener net.Listener
-	waitGroup *sync.WaitGroup
+	listener      net.Listener
+	waitGroup     *sync.WaitGroup
 }
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	buf := make([]byte, 4096)
 	for {
-		n, err := conn.Read(buf) 
+		n, err := conn.Read(buf)
 		if err != nil {
 			if err != io.EOF {
 				fmt.Println("Read error:", err)
 			}
 			return
 		}
-		conn.
+		conn.Write(buf[:n])
 	}
 }
 
@@ -49,7 +49,7 @@ func StartServer(protocol string, ip string, port string, ctx context.Context, w
 				case <-ctx.Done():
 					return
 				default:
-					fmt.Println("Server Accept error: ", err)	
+					fmt.Println("Server Accept error: ", err)
 					continue
 				}
 			}
@@ -78,20 +78,33 @@ func (ltb *LoopbackTCPBenchmark) Setup() error {
 }
 
 func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
-	
+	conn, err := net.Dial("tcp", "127.0.0.1:9000")
+	if err != nil {
+		return 0, fmt.Errorf("Unable to connect to 127.0.0.1: %v", err)
+	}
+	defer conn.Close()
+
+	writeBuf := make([]byte, 4096)
+	readBuf := make([]byte, 4096)
+
+	startTime := time.Now()
+
+	conn.Write(writeBuf)
+	conn.Read(readBuf)
+
+	duration := time.Since(startTime)
 	return duration, nil
 }
 
 func (ltb *LoopbackTCPBenchmark) Teardown() {
 	if ltb.cancelContext != nil {
 		ltb.cancelContext()
-		
+
 	}
 
 	if ltb.listener != nil {
 		ltb.listener.Close()
 	}
-	
 
 	ltb.waitGroup.Wait()
 }
