@@ -1,9 +1,34 @@
 package bench
 
+import (
+	"os"
+
+	"gopkg.in/yaml.v3"
+)
+
+type BenchmarkSuite struct {
+	Benchmarks []BenchmarkOptions `yaml:"benchmarks"`
+}
+
 type BenchmarkOptions struct {
-	Benchmark   string
-	Iterations  int
-	Parallelism int
-	BlockSize   uint
-	Stride      uint
+	Benchmark   string `yaml:"benchmark"`
+	Iterations  int    `yaml:"iterations"`
+	Parallelism int    `yaml:"parallelism"`
+	BlockSize   uint   `yaml:"block_size"`
+	Stride      uint   `yaml:"stride"`
+}
+
+func LoadBenchmarkSuite(configPath string) (*BenchmarkSuite, error) {
+	configData, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var benchmarkSuite BenchmarkSuite
+	err = yaml.Unmarshal(configData, &benchmarkSuite)
+	if err != nil {
+		return nil, err
+	}
+
+	return &benchmarkSuite, nil
 }

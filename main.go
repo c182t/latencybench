@@ -28,6 +28,19 @@ func RunBenchmark(b bench.Benchmark, n int) bench.BenchmarkAggregatedResult {
 }
 
 func main() {
+	var benchmarkLabelMap = map[string]func(options bench.BenchmarkOptions) bench.Benchmark{
+		"read":  func(options bench.BenchmarkOptions) bench.Benchmark { return &bench.ReadBenchmark{Options: &options} },
+		"write": func(options bench.BenchmarkOptions) bench.Benchmark { return &bench.WriteBenchmark{Options: &options} },
+		"sync":  func(options bench.BenchmarkOptions) bench.Benchmark { return &bench.SyncBenchmark{Options: &options} },
+		"memory_copy": func(options bench.BenchmarkOptions) bench.Benchmark {
+			return &bench.MemoryCopyBenchmark{Options: &options}
+		},
+		"memory_stride": func(options bench.BenchmarkOptions) bench.Benchmark {
+			return &bench.MemoryStrideBenchmark{Options: &options}
+		},
+	}
+
+	configPath := flag.String("config_path", "", "yaml config file path")
 	benchmarkLabel := flag.String("benchmark", "read", "Benchmark to execute (e.g. read, write, sync)")
 	iterations := flag.Int("iterations", 1000, "Number of benchmark iterations")
 	parallelism := flag.Int("parallelism", 1, "Number of threads to run in parallel")
@@ -36,23 +49,33 @@ func main() {
 
 	flag.Parse()
 
-	options := bench.BenchmarkOptions{Benchmark: *benchmarkLabel,
-		Iterations:  *iterations,
-		Parallelism: *parallelism,
-		BlockSize:   *blockSize,
-		Stride:      *stride}
+	if *configPath != "" {
+		suite, err := bench.LoadBenchmarkSuite(*configPath)
+		if err != nil {
+			fmt.Printf("Failed to load config [%s]: %v", *configPath, err)
+		}
 
-	var benchmarkLabelMap = map[string]bench.Benchmark{
-		"read":          &bench.ReadBenchmark{Options: &options},
-		"write":         &bench.WriteBenchmark{Options: &options},
-		"sync":          &bench.SyncBenchmark{Options: &options},
-		"memory_copy":   &bench.MemoryCopyBenchmark{Options: &options},
-		"memory_stride": &bench.MemoryStrideBenchmark{Options: &options},
+		for _, options := range suite.Benchmarks {
+			benchmark := benchmarkLabelMap[options.Benchmark]
+			if benchmark == nil {
+				fmt.Printf("Unknown benchmark: %s", options.Benchmark)
+				continue
+			}
+
+			result := RunBenchmark(benchmark(options), options.Iterations)
+			fmt.Printf("Benchmark '%s': %+v\n", options.Benchmark, result)
+		}
+	} else {
+		options := bench.BenchmarkOptions{Benchmark: *benchmarkLabel,
+			Iterations:  *iterations,
+			Parallelism: *parallelism,
+			BlockSize:   *blockSize,
+			Stride:      *stride}
+
+		benchmark := benchmarkLabelMap[*benchmarkLabel]
+		benchmarkResult := RunBenchmark(benchmark(options),
+			*iterations)
+
+		fmt.Printf("%s benchmark = %+v\n", *benchmarkLabel, benchmarkResult)
 	}
-
-	benchmark := benchmarkLabelMap[*benchmarkLabel]
-	benchmarkResult := RunBenchmark(benchmark,
-		*iterations)
-
-	fmt.Printf("%s benchmark = %+v\n", *benchmarkLabel, benchmarkResult)
 }
