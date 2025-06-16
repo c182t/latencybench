@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"latencybench/bench"
+
+	"gopkg.in/yaml.v3"
 )
 
 func RunBenchmark(b bench.Benchmark, n int) bench.BenchmarkAggregatedResult {
@@ -55,6 +57,7 @@ func main() {
 			fmt.Printf("Failed to load config [%s]: %v", *configPath, err)
 		}
 
+		var resultsOptions []interface{}
 		for _, options := range suite.Benchmarks {
 			benchmark := benchmarkLabelMap[options.Benchmark]
 			if benchmark == nil {
@@ -63,8 +66,18 @@ func main() {
 			}
 
 			result := RunBenchmark(benchmark(options), options.Iterations)
-			fmt.Printf("Benchmark '%s': %+v\n", options.Benchmark, result)
+
+			combinedResult := map[string]interface{}{
+				"options":           options,
+				"aggregated_result": result,
+			}
+
+			resultsOptions = append(resultsOptions, combinedResult)
 		}
+
+		yamlResultsOptions, _ := yaml.Marshal(resultsOptions)
+		fmt.Println(string(yamlResultsOptions))
+
 	} else {
 		options := bench.BenchmarkOptions{Benchmark: *benchmarkLabel,
 			Iterations:  *iterations,

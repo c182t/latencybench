@@ -12,10 +12,10 @@ type BenchmarkDurations struct {
 }
 
 type BenchmarkAggregatedResult struct {
-	Min time.Duration
-	Avg time.Duration
-	Max time.Duration
-	P95 time.Duration
+	Min time.Duration `yaml:"min"`
+	Avg time.Duration `yaml:"avg"`
+	Max time.Duration `yaml:"max"`
+	P95 time.Duration `yaml:"p96"`
 }
 
 type Benchmark interface {
