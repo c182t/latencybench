@@ -2,100 +2,32 @@ package bench
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net"
-	"sync"
 	"time"
 )
 
 type LoopbackTCPBenchmark struct {
-	Options       *BenchmarkOptions
-	protocol      string
-	ip            string
-	port          int
-	serverContext context.Context
-	cancelContext context.CancelFunc
-	listener      net.Listener
-	waitGroup     *sync.WaitGroup
-}
-
-func handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-	buf := make([]byte, 2048)
-	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			if err != io.EOF {
-				fmt.Println("Read error:", err)
-			}
-			break
-		}
-		conn.Write(buf[:n])
-	}
-}
-
-func StartServer(protocol string, ip string, port string, ctx context.Context, wg *sync.WaitGroup) (net.Listener, error) {
-	addr := fmt.Sprintf("%s:%s", ip, port)
-
-	ln, err := net.Listen(protocol, addr)
-	if err != nil {
-		fmt.Printf("Unable to start server [protocol=%s; addr=%s]: %v", protocol, addr, err)
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					fmt.Println("Server Accept error: ", err)
-					continue
-				}
-			}
-			go handleConnection(conn)
-		}
-	}()
-
-	return ln, nil
+	Options   *BenchmarkOptions
+	tcpServer TCPServer
 }
 
 func (ltb *LoopbackTCPBenchmark) Setup() error {
-	ltb.protocol = "tcp"
-	ltb.ip = "127.0.0.1"
-
-	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
-
-	ln, err := StartServer(ltb.protocol,
-		ltb.ip, "0", ctx, &wg)
-
+	tcpServer := TCPServer{}
+	err := tcpServer.Start("tcp", "127.0.0.1", 0)
 	if err != nil {
 		return fmt.Errorf("Unable to start TCP server for LoopbackTCPBenchmark: %v", err)
 	}
-
-	ltb.port = ln.Addr().(*net.TCPAddr).Port
-
-	ltb.serverContext = ctx
-	ltb.cancelContext = cancel
-	ltb.listener = ln
-	ltb.waitGroup = &wg
-
+	ltb.tcpServer = tcpServer
 	return nil
 }
 
 func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
-	addr := fmt.Sprintf("%s:%d", ltb.ip, ltb.port)
-	conn, err := net.Dial(ltb.protocol, addr)
+	addr := fmt.Sprintf("%s:%d", ltb.tcpServer.ip, ltb.tcpServer.port)
+	conn, err := net.Dial(ltb.tcpServer.protocol, addr)
 	if err != nil {
-		return 0, fmt.Errorf("unable to connect to %s on %s; %v", addr, ltb.protocol, err)
+		return 0, fmt.Errorf("unable to connect to %s on %s; %v", addr, ltb.tcpServer.protocol, err)
 	}
 
 	defer conn.Close()
@@ -131,15 +63,10 @@ func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
 }
 
 func (ltb *LoopbackTCPBenchmark) Teardown() {
-	if ltb.cancelContext != nil {
-		ltb.cancelContext()
+	err := ltb.tcpServer.Stop()
+	if err != nil {
+		fmt.Printf("error occurd at Teardown: %v", err)
 	}
-
-	if ltb.listener != nil {
-		ltb.listener.Close()
-	}
-
-	ltb.waitGroup.Wait()
 }
 
 func (ltb *LoopbackTCPBenchmark) Clone() Benchmark {
