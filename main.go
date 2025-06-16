@@ -32,19 +32,22 @@ func main() {
 	iterations := flag.Int("iterations", 1000, "Number of benchmark iterations")
 	parallelism := flag.Int("parallelism", 1, "Number of threads to run in parallel")
 	blockSize := flag.Uint("block_size", 4*1024, "Block size (e.g. 4096)")
+	stride := flag.Uint("stride", 64, "Memory access stride (e.g. 1 for sequential, 64 to jump 64 bytes, etc)")
 
 	flag.Parse()
 
 	options := bench.BenchmarkOptions{Benchmark: *benchmarkLabel,
 		Iterations:  *iterations,
 		Parallelism: *parallelism,
-		BlockSize:   *blockSize}
+		BlockSize:   *blockSize,
+		Stride:      *stride}
 
 	var benchmarkLabelMap = map[string]bench.Benchmark{
-		"read":        &bench.ReadBenchmark{Options: &options},
-		"write":       &bench.WriteBenchmark{Options: &options},
-		"sync":        &bench.SyncBenchmark{Options: &options},
-		"memory_copy": &bench.MemoryCopyBenchmark{Options: &options},
+		"read":          &bench.ReadBenchmark{Options: &options},
+		"write":         &bench.WriteBenchmark{Options: &options},
+		"sync":          &bench.SyncBenchmark{Options: &options},
+		"memory_copy":   &bench.MemoryCopyBenchmark{Options: &options},
+		"memory_stride": &bench.MemoryStrideBenchmark{Options: &options},
 	}
 
 	benchmark := benchmarkLabelMap[*benchmarkLabel]

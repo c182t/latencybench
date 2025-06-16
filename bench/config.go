@@ -5,4 +5,5 @@ type BenchmarkOptions struct {
 	Iterations  int
 	Parallelism int
 	BlockSize   uint
+	Stride      uint
 }
