@@ -24,7 +24,7 @@ type LoopbackTCPBenchmark struct {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	buf := make([]byte, 1028)
+	buf := make([]byte, 2048)
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
@@ -94,8 +94,9 @@ func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
 	addr := fmt.Sprintf("%s:%s", ltb.ip, ltb.port)
 	conn, err := net.Dial(ltb.protocol, addr)
 	if err != nil {
-		return 0, fmt.Errorf("Unable to connect to %s on %s; %v", addr, ltb.protocol, err)
+		return 0, fmt.Errorf("unable to connect to %s on %s; %v", addr, ltb.protocol, err)
 	}
+
 	defer conn.Close()
 
 	writeBuf := bytes.Repeat([]byte{'.'}, 4096)
@@ -108,7 +109,20 @@ func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
 	startTime := time.Now()
 
 	conn.Write(writeBuf)
-	conn.Read(readBuf)
+
+	tcpConn := conn.(*net.TCPConn)
+	tcpConn.CloseWrite()
+
+	for {
+		n, err := conn.Read(readBuf)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Error occured while read on client side (read %d bytes): %v", n, err)
+			}
+			break
+		}
+	}
+
 	//fmt.Printf("readBuf=%s-%s", readBuf[:5], readBuf[len(readBuf)-5:len(readBuf)])
 
 	duration := time.Since(startTime)
@@ -118,7 +132,6 @@ func (ltb *LoopbackTCPBenchmark) RunOnce() (time.Duration, error) {
 func (ltb *LoopbackTCPBenchmark) Teardown() {
 	if ltb.cancelContext != nil {
 		ltb.cancelContext()
-
 	}
 
 	if ltb.listener != nil {
