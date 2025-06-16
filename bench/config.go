@@ -16,6 +16,7 @@ type BenchmarkOptions struct {
 	Parallelism int    `yaml:"parallelism"`
 	BlockSize   uint   `yaml:"block_size"`
 	Stride      uint   `yaml:"stride"`
+	RawSyscall  bool   `yaml:"raw_syscall"`
 }
 
 func LoadBenchmarkSuite(configPath string) (*BenchmarkSuite, error) {

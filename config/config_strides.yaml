@@ -1,0 +1,54 @@
+benchmarks:
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 1
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 2
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 3
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 4
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 5
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 6
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 7
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 8
+
+  - benchmark: memory_stride
+    iterations: 1000
+    parallelism: 1
+    block_size: 16384
+    stride: 9

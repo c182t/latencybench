@@ -40,6 +40,12 @@ func main() {
 		"memory_stride": func(options bench.BenchmarkOptions) bench.Benchmark {
 			return &bench.MemoryStrideBenchmark{Options: &options}
 		},
+		"getpid": func(options bench.BenchmarkOptions) bench.Benchmark {
+			return &bench.GetPidBenchmark{Options: &options}
+		},
+		"retint": func(options bench.BenchmarkOptions) bench.Benchmark {
+			return &bench.RetIntBenchmark{Options: &options}
+		},
 	}
 
 	configPath := flag.String("config_path", "", "yaml config file path")
@@ -48,6 +54,7 @@ func main() {
 	parallelism := flag.Int("parallelism", 1, "Number of threads to run in parallel")
 	blockSize := flag.Uint("block_size", 4*1024, "Block size (e.g. 4096)")
 	stride := flag.Uint("stride", 64, "Memory access stride (e.g. 1 for sequential, 64 to jump 64 bytes, etc)")
+	rawSyscall := flag.Bool("raw_syscall", false, "Use RawSyscal (Linux x86_64 only)")
 
 	flag.Parse()
 
@@ -83,7 +90,8 @@ func main() {
 			Iterations:  *iterations,
 			Parallelism: *parallelism,
 			BlockSize:   *blockSize,
-			Stride:      *stride}
+			Stride:      *stride,
+			RawSyscall:  *rawSyscall}
 
 		benchmark := benchmarkLabelMap[*benchmarkLabel]
 		benchmarkResult := RunBenchmark(benchmark(options),
