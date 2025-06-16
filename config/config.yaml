@@ -1,22 +1,22 @@
 benchmarks:
   - benchmark: read
-    iterations: 1000
-    parallelism: 2
+    iterations: 100000
+    parallelism: 8
     block_size: 4096 
     stride: 64
 
   - benchmark: write
-    iterations: 1000
-    parallelism: 2
+    iterations: 100000
+    parallelism: 8
     block_size: 8192
 
   - benchmark: sync
-    iterations: 1000
-    parallelism: 2
+    iterations: 100000
+    parallelism: 8
     block_size: 8192
 
   - benchmark: memory_stride
-    iterations: 1000
-    parallelism: 4
+    iterations: 100000
+    parallelism: 8
     block_size: 16384
     stride: 64

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"latencybench/bench"
+	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
@@ -30,6 +31,8 @@ func RunBenchmark(b bench.Benchmark, n int) bench.BenchmarkAggregatedResult {
 }
 
 func main() {
+	fmt.Printf("Starting latencybench with GOMAXPROCS=%d\n", runtime.GOMAXPROCS(0))
+
 	var benchmarkLabelMap = map[string]func(options bench.BenchmarkOptions) bench.Benchmark{
 		"read":  func(options bench.BenchmarkOptions) bench.Benchmark { return &bench.ReadBenchmark{Options: &options} },
 		"write": func(options bench.BenchmarkOptions) bench.Benchmark { return &bench.WriteBenchmark{Options: &options} },
